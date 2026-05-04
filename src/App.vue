@@ -1,85 +1,84 @@
-<script setup>
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <div id="app" class="main-container">
+    <h1>Interface Front-Office Visa</h1>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
+    <!-- FORMULAIRE DE RECHERCHE -->
+    <div class="search-section">
+      <label>Entrez votre numéro de passeport ou votre numéro de demande :</label>
+      <div class="input-group">
+        <input 
+          v-model="searchInput" 
+          type="text" 
+          placeholder="Ex: A1234567 ou DEM-101"
+          @keyup.enter="handleSearch"
+        />
+        <button @click="handleSearch">Submit</button>
+      </div>
     </div>
-  </header>
 
-  <RouterView />
+    <!-- AFFICHAGE DES RÉSULTATS -->
+    <div v-if="results.length > 0" class="results-section">
+      <h3>Résultats de recherche ({{ results.length }})</h3>
+      <DemandeListe :demandes="results" :highlightId="targetId" />
+    </div>
+    
+    <div v-else-if="hasSearched" class="no-data">
+      Aucun résultat trouvé pour "{{ searchInput }}".
+    </div>
+  </div>
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
+<script>
+import { mockDemandes } from './mockData';
+import DemandeListe from './components/DemandeListe.vue';
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
+export default {
+  components: { DemandeListe },
+  data() {
+    return {
+      searchInput: '',
+      results: [],
+      targetId: null,
+      hasSearched: false
+    }
+  },
+  methods: {
+    handleSearch() {
+      const q = this.searchInput.trim().toUpperCase();
+      this.hasSearched = true;
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
+      if (!q) {
+        this.results = [];
+        return;
+      }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
+      // Filtrer les données correspondant à l'ID ou au Passeport
+      let found = mockDemandes.filter(d => 
+        d.id === q || d.passeport.numero === q
+      );
 
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
+      if (q.startsWith('DEM')) {
+        // CAS RECHERCHE PAR DEMANDE : On met en avant
+        this.targetId = q;
+        // La demande concernée est mise en premier dans la liste
+        this.results = found.sort((a, b) => (a.id === q ? -1 : 1));
+      } else {
+        // CAS RECHERCHE PAR PASSEPORT : Chronologique
+        this.targetId = null;
+        // Tri du plus récent au plus ancien
+        this.results = found.sort((a, b) => new Date(b.dateDemande) - new Date(a.dateDemande));
+      }
+    }
   }
 }
+</script>
+
+<style>
+.main-container { max-width: 900px; margin: 50px auto; padding: 20px; font-family: Arial, sans-serif; }
+.search-section { background: #eee; padding: 20px; border-radius: 5px; margin-bottom: 30px; }
+.input-group { display: flex; gap: 10px; margin-top: 10px; }
+input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 4px; }
+button { padding: 12px 25px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+button:hover { background: #34495e; }
+.no-data { text-align: center; color: #7f8c8d; margin-top: 20px; }
 </style>
